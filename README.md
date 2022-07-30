@@ -1,0 +1,1 @@
+to start up server run the following command: `clear; uvicorn src.index:app --reload`

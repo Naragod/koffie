@@ -1,0 +1,4 @@
+.vscode/
+exports/*
+.prettierrc
+__pycache__/
