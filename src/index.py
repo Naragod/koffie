@@ -5,7 +5,7 @@ def main():
   try:
     app
   except Exception as e:
-    print("AAAAAAAAAAAAAAAA")
+    print("Error Error")
     return {"message": "There was an unexpected error", "error": e}
 
 

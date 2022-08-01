@@ -7,6 +7,8 @@ class Decoder:
   def __init__(self, base_url):
     self.base_url = base_url
 
+  # decided to make this use the batch api, to allow future extendebility
+  # we might want to decode multiple vins in the future for example
   def decode_vins(self, vins):
     result = {}
     formatted_vins = ";".join(vins)
