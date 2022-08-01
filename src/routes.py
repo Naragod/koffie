@@ -8,12 +8,9 @@ from .cache import Cache
 import pathlib
 
 app = FastAPI()
+base__vin_decoder_url = 'https://vpic.nhtsa.dot.gov/api/'
 home_dir = str(pathlib.Path(__file__).resolve().parents[1])
-
-
-@ app.get('/')
-def read_root():
-  return {"hello": "world"}
+decoder = Decoder(base__vin_decoder_url)
 
 
 @ app.get("/lookup/{vin}")
@@ -30,7 +27,7 @@ def lookup_vin(vin: str):
       cached_result[0] += (True,)
       return cached_result
     # call vPIC endpoint
-    decoded_vins = decode_vins([vin])
+    decoded_vins = decoder.decode_vins([vin])
 
     for item in decoded_vins:
       insert_values = ()

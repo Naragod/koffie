@@ -1,39 +1,78 @@
 import unittest
-from unittest.mock import MagicMock, create_autospec, patch
-from ..decoder import decode_vins
+from fastapi.testclient import TestClient
+
+from ..cache import Cache
+from ..decoder import Decoder
+from ..routes import app
+from unittest.mock import patch
+import json
 
 
-class MockResponse:
-  def __init__(self, json_data):
-    self.json_data = json_data
-    print("json_data:", json_data)
-
-  def json(self):
-    return self.json_data
+client = TestClient(app)
 
 
-def mocked_post_request(data):
-  return MockResponse(data)
+class TestEndpoints(unittest.TestCase):
 
+  @patch.object(Cache, "query")
+  @patch.object(Cache, "close")
+  @patch.object(Cache, "commit")
+  @patch.object(Cache, "__init__")
+  def test_incorrect_vin_lookup(self, init, commit, close, query):
+    init.return_value = None
+    commit.return_value = None
+    close.return_value = None
+    query.return_value = None
 
-class TestDecoder(unittest.TestCase):
-  @patch('src.decoder.requests.get', side_effect=mocked_post_request)
-  def test_decode_vins(self, _vins):
-    test_vin = 'QWASZXQWASZX12345'
-    expected_result = {
-        'QWASZXQWASZX12345': {
-            'vin': 'QWASZXQWASZX12345',
-            'make': '',
-            'model': '',
-            'year': '',
-            'body_class': ''
+    response = client.get("/lookup/123")
+    response_content = json.loads(response.content)
+    self.assertEqual(response.status_code, 404)
+    self.assertEqual(response_content["detail"], "Invalid Vin")
+
+  @patch.object(Cache, "query")
+  @patch.object(Cache, "close")
+  @patch.object(Cache, "commit")
+  @patch.object(Cache, "__init__")
+  def test_correct_vin_lookup_vin_is_cached(self, init, commit, close, query):
+    expected_response = [('QWASZXQWASZX12345', 'make', 'model', 'year', 'class')]
+    init.return_value = None
+    commit.return_value = None
+    close.return_value = None
+    query.return_value = expected_response
+
+    response = client.get("/lookup/QWASZXQWASZX12345")
+    response_content = json.loads(response.content)
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response_content, [['QWASZXQWASZX12345', 'make', 'model', 'year', 'class', True]])
+
+  @patch.object(Cache, "query")
+  @patch.object(Cache, "close")
+  @patch.object(Cache, "commit")
+  @patch.object(Cache, "__init__")
+  @patch.object(Decoder, "decode_vins")
+  def test_correct_vin_lookup_vin_is_not_cached(self, decode_vins, init, commit, close, query):
+    expected_response = {
+        '1XPWD40X1ED215307': {
+            'vin': '1XPWD40X1ED215307',
+            'make': 'PETERBILT',
+            'model': '388',
+            'year': '2014',
+            'body_class':
+            'Truck-Tractor'
         }
     }
-    result = decode_vins([test_vin])
-    print("Result:", result)
-    self.assertEqual(result, expected_result)
+    init.return_value = None
+    commit.return_value = None
+    close.return_value = None
+    query.return_value = []
+    decode_vins.return_value = expected_response
+
+    response = client.get("/lookup/QWASZXQWASZX12345")
+    response_content = json.loads(response.content)
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response_content, expected_response)
 
 
 if __name__ == '__main__':
-  print("AAAAAAAAAA")
+  print("Running unit tests...")
   unittest.main()
+  print("All unit tests have finished.")
